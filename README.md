@@ -24,11 +24,11 @@ In order to implement multi-label classification, I modify (add) the following f
 8.	 ./timm/models/multi_label_model.py (add)
 
 **In order to train your own dataset, you only need to modify the 1, 2, 4, 8 files.** <br>
-Simply modify the code between double dashed lines, or search color/gender/article, that’s the code/label that you need to change.
+Simply modify the code between the double dashed lines, or search color/gender/article, that’s the code/label that you need to change.
 
 In terms of backbones, I only modified ./timm/models/efficientnet.py, I add an as_sequential_for_ML method. <br>
 For other models, you need to define the as_sequential_for_ML method yourself within each class. It’s simply a part of the as_sequential method. <br>
-We only need the backbone at this moment, so remove the last layers, for example classifier layer, from as_sequential method (see forward_features method, then you would know which layers you need to remove), then you will get as_sequential_for_ML method. (But note that not all models have as_sequential method.)
+We only need the backbone at this moment, so remove the last layers, for example classifier layer, from the as_sequential method. See forward_features method in each model class, then you would know which layers you need to remove, or how to define the as_sequential_for_ML method.
 
 In addition, besides the multi-label classification functionality, I also add gradient centralization within AdamP optimizer. <br>
 [Gradient centralization](https://github.com/Yonghongwei/Gradient-Centralization) is a simple technique and may improve the optimizer performance. <br>
@@ -52,7 +52,8 @@ And a command example to start to validate: <br>
 ```
 python validate.py ./fashion-product-images/ --model efficientnet_b2 --checkpoint ./output/train/your_specific_folder/model_best.pth.tar -b 64  
 ```
-
+ 
+ <br>
 Please give a star if you find this repo helpful.
 
 ### License
