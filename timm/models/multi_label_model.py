@@ -82,7 +82,7 @@ class MultiLabelModel(nn.Module):
 
         acc1 = WEIGHT_COLOR * acc1_color + WEIGHT_GENDER * acc1_gender + WEIGHT_ARTICLE * acc1_article
         acc5 = WEIGHT_COLOR * acc5_color + WEIGHT_GENDER * acc5_gender + WEIGHT_ARTICLE * acc5_article
-        return acc1, acc5
+        return acc1, acc5, {'color': acc1_color, 'gender': acc1_gender, 'article': acc1_article}
 
     @staticmethod
     def calculate_metrics(output, target):

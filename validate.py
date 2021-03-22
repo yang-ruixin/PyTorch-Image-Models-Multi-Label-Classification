@@ -207,6 +207,8 @@ def validate(args):
     #     load_bytes=args.tf_preprocessing, class_map=args.class_map)
 
     dataset = DatasetML(test_path, attributes)
+    num_of_data = len(dataset)
+    print('number of data:', num_of_data)
     # ================================
 
     if args.valid_labels:
@@ -248,6 +250,9 @@ def validate(args):
             input = input.contiguous(memory_format=torch.channels_last)
         model(input)
         end = time.time()
+
+        acc1_color = acc1_gender = acc1_article = 0  # ================================
+
         for batch_idx, (input, target) in enumerate(loader):
             if args.no_prefetcher:
                 target = target.cuda()
@@ -273,7 +278,12 @@ def validate(args):
             # measure accuracy and record loss
             # ================================
             # acc1, acc5 = accuracy(output.detach(), target, topk=(1, 5))
-            acc1, acc5 = model.get_accuracy(accuracy, output, target, topk=(1, 5))  # topk=(1, 2) ================================
+            acc1, acc5, acc1_for_each_label = model.get_accuracy(accuracy, output, target, topk=(1, 5))  # topk=(1, 2) ================================
+
+            percentage = len(input) / num_of_data
+            acc1_color += acc1_for_each_label['acc1_color'] * percentage
+            acc1_gender += acc1_for_each_label['acc1_gender'] * percentage
+            acc1_article += acc1_for_each_label['acc1_article'] * percentage
             # ================================
 
             losses.update(loss.item(), input.size(0))
@@ -308,8 +318,10 @@ def validate(args):
         cropt_pct=crop_pct,
         interpolation=data_config['interpolation'])
 
-    _logger.info(' * Acc@1 {:.3f} ({:.3f}) Acc@5 {:.3f} ({:.3f})'.format(
-       results['top1'], results['top1_err'], results['top5'], results['top5_err']))
+    # ================================
+    _logger.info(' * Acc@1 {:.3f} ({:.3f}) Acc@5 {:.3f} ({:.3f}) acc1_color {:.3f} acc1_gender {:.3f} acc1_article {:.3f}'.format(
+       results['top1'], results['top1_err'], results['top5'], results['top5_err'], acc1_color, acc1_gender, acc1_article))
+    # ================================
 
     return results
 
