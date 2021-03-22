@@ -825,7 +825,7 @@ def validate(model, loader, loss_fn, args, amp_autocast=suppress, log_suffix='')
             accuracy_article += batch_accuracy_article
 
             # acc1, acc5 = accuracy(output, target, topk=(1, 5))
-            acc1, acc5 = model.get_accuracy(accuracy, output, target, topk=(1, 5))  # topk=(1, 2) ================================
+            acc1, acc5, _ = model.get_accuracy(accuracy, output, target, topk=(1, 5))  # topk=(1, 2) ================================
             # ================================
 
             if args.distributed:
