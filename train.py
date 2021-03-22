@@ -491,6 +491,11 @@ def main():
 
     dataset_train = DatasetML(train_path, attributes)
     dataset_eval = DatasetML(val_path, attributes)
+
+    num_of_data_train = len(dataset_train)
+    print('number of training data:', num_of_data_train)
+    num_of_data_val = len(dataset_eval)
+    print('number of validation data:', num_of_data_val)
     # ================================
 
     # setup mixup / cutmix
@@ -599,7 +604,7 @@ def main():
                 loader_train.sampler.set_epoch(epoch)
 
             train_metrics, lr = train_one_epoch(
-                epoch, model, loader_train, optimizer, train_loss_fn, args,
+                num_of_data_train, epoch, model, loader_train, optimizer, train_loss_fn, args,
                 lr_scheduler=lr_scheduler, saver=saver, output_dir=output_dir,
                 amp_autocast=amp_autocast, loss_scaler=loss_scaler, model_ema=model_ema, mixup_fn=mixup_fn)
 
@@ -608,13 +613,13 @@ def main():
                     _logger.info("Distributing BatchNorm running means and vars")
                 distribute_bn(model, args.world_size, args.dist_bn == 'reduce')
 
-            eval_metrics = validate(model, loader_eval, validate_loss_fn, args, amp_autocast=amp_autocast)
+            eval_metrics = validate(num_of_data_val, model, loader_eval, validate_loss_fn, args, amp_autocast=amp_autocast)
 
             if model_ema is not None and not args.model_ema_force_cpu:
                 if args.distributed and args.dist_bn in ('broadcast', 'reduce'):
                     distribute_bn(model_ema, args.world_size, args.dist_bn == 'reduce')
                 ema_eval_metrics = validate(
-                    model_ema.module, loader_eval, validate_loss_fn, args, amp_autocast=amp_autocast, log_suffix=' (EMA)')
+                    num_of_data_val, model_ema.module, loader_eval, validate_loss_fn, args, amp_autocast=amp_autocast, log_suffix=' (EMA)')
                 eval_metrics = ema_eval_metrics
 
             if lr_scheduler is not None:
@@ -637,7 +642,7 @@ def main():
 
 
 def train_one_epoch(
-        epoch, model, loader, optimizer, loss_fn, args,
+        num_of_data_train, epoch, model, loader, optimizer, loss_fn, args,
         lr_scheduler=None, saver=None, output_dir='', amp_autocast=suppress,
         loss_scaler=None, model_ema=None, mixup_fn=None):
 
@@ -660,9 +665,10 @@ def train_one_epoch(
 
     # ================================
     total_loss = 0
-    accuracy_color = 0
-    accuracy_gender = 0
-    accuracy_article = 0
+    acc1_color = acc1_gender = acc1_article = 0
+    # accuracy_color = 0
+    # accuracy_gender = 0
+    # accuracy_article = 0
     lr = 0.0
     # ================================
 
@@ -686,11 +692,20 @@ def train_one_epoch(
             # ================================
 
         # ================================
-        batch_accuracy_color, batch_accuracy_gender, batch_accuracy_article = model.calculate_metrics(output, target)
+        acc1, acc5, acc1_for_each_label = model.get_accuracy(accuracy, output, target, topk=(1, 2))
 
-        accuracy_color += batch_accuracy_color
-        accuracy_gender += batch_accuracy_gender
-        accuracy_article += batch_accuracy_article
+        # print('len(input)', len(input))
+        # print('num_of_data_train', num_of_data_train)
+        percentage = len(input) / num_of_data_train
+        acc1_color += acc1_for_each_label['color'] * percentage
+        acc1_gender += acc1_for_each_label['gender'] * percentage
+        acc1_article += acc1_for_each_label['article'] * percentage
+
+        # batch_accuracy_color, batch_accuracy_gender, batch_accuracy_article = model.calculate_metrics(output, target)
+        #
+        # accuracy_color += batch_accuracy_color
+        # accuracy_gender += batch_accuracy_gender
+        # accuracy_article += batch_accuracy_article
         # ================================
 
         if not args.distributed:
@@ -763,11 +778,14 @@ def train_one_epoch(
     # ================================
     num_of_batches_per_epoch = len(loader)
     print("epoch {:4d}, training loss: {:.4f}, accuracy_color: {:.4f}, accuracy_gender: {:.4f}, accuracy_article: {:.4f}\n".format(
-        epoch,
-        total_loss / num_of_batches_per_epoch,
-        accuracy_color / num_of_batches_per_epoch,
-        accuracy_gender / num_of_batches_per_epoch,
-        accuracy_article / num_of_batches_per_epoch))
+            epoch, total_loss / num_of_batches_per_epoch, acc1_color, acc1_gender, acc1_article))
+
+    # print("epoch {:4d}, training loss: {:.4f}, accuracy_color: {:.4f}, accuracy_gender: {:.4f}, accuracy_article: {:.4f}\n".format(
+    #     epoch,
+    #     total_loss / num_of_batches_per_epoch,
+    #     accuracy_color / num_of_batches_per_epoch,
+    #     accuracy_gender / num_of_batches_per_epoch,
+    #     accuracy_article / num_of_batches_per_epoch))
     # ================================
 
     if hasattr(optimizer, 'sync_lookahead'):
@@ -776,7 +794,7 @@ def train_one_epoch(
     return OrderedDict([('loss', losses_m.avg)]), lr
 
 
-def validate(model, loader, loss_fn, args, amp_autocast=suppress, log_suffix=''):
+def validate(num_of_data_val, model, loader, loss_fn, args, amp_autocast=suppress, log_suffix=''):
     batch_time_m = AverageMeter()
     losses_m = AverageMeter()
     top1_m = AverageMeter()
@@ -789,9 +807,10 @@ def validate(model, loader, loss_fn, args, amp_autocast=suppress, log_suffix='')
     with torch.no_grad():
         # ================================
         total_loss = 0
-        accuracy_color = 0
-        accuracy_gender = 0
-        accuracy_article = 0
+        acc1_color = acc1_gender = acc1_article = 0
+        # accuracy_color = 0
+        # accuracy_gender = 0
+        # accuracy_article = 0
         # ================================
 
         for batch_idx, (input, target) in enumerate(loader):
@@ -818,11 +837,20 @@ def validate(model, loader, loss_fn, args, amp_autocast=suppress, log_suffix='')
             loss = model.get_loss(loss_fn, output, target)
             total_loss += loss.item()
 
-            batch_accuracy_color, batch_accuracy_gender, batch_accuracy_article = model.calculate_metrics(output, target)
+            acc1, acc5, acc1_for_each_label = model.get_accuracy(accuracy, output, target, topk=(1, 2))
 
-            accuracy_color += batch_accuracy_color
-            accuracy_gender += batch_accuracy_gender
-            accuracy_article += batch_accuracy_article
+            # print('len(input)', len(input))
+            # print('num_of_data_val', num_of_data_val)
+            percentage = len(input) / num_of_data_val
+            acc1_color += acc1_for_each_label['color'] * percentage
+            acc1_gender += acc1_for_each_label['gender'] * percentage
+            acc1_article += acc1_for_each_label['article'] * percentage
+
+            # batch_accuracy_color, batch_accuracy_gender, batch_accuracy_article = model.calculate_metrics(output, target)
+            #
+            # accuracy_color += batch_accuracy_color
+            # accuracy_gender += batch_accuracy_gender
+            # accuracy_article += batch_accuracy_article
 
             # acc1, acc5 = accuracy(output, target, topk=(1, 5))
             acc1, acc5, _ = model.get_accuracy(accuracy, output, target, topk=(1, 5))  # topk=(1, 2) ================================
@@ -865,12 +893,15 @@ def validate(model, loader, loss_fn, args, amp_autocast=suppress, log_suffix='')
     # ================================
     num_of_batches_per_epoch = len(loader)
     avg_loss = total_loss / num_of_batches_per_epoch
-    accuracy_color /= num_of_batches_per_epoch
-    accuracy_gender /= num_of_batches_per_epoch
-    accuracy_article /= num_of_batches_per_epoch
+    # accuracy_color /= num_of_batches_per_epoch
+    # accuracy_gender /= num_of_batches_per_epoch
+    # accuracy_article /= num_of_batches_per_epoch
 
     print("Validation loss: {:.4f}, accuracy_color: {:.4f}, accuracy_gender: {:.4f}, accuracy_article: {:.4f}\n"
-          .format(avg_loss, accuracy_color, accuracy_gender, accuracy_article))
+          .format(avg_loss, acc1_color, acc1_gender, acc1_article))
+
+    # print("Validation loss: {:.4f}, accuracy_color: {:.4f}, accuracy_gender: {:.4f}, accuracy_article: {:.4f}\n"
+    #       .format(avg_loss, accuracy_color, accuracy_gender, accuracy_article))
     # ================================
 
     metrics = OrderedDict([('loss', losses_m.avg), ('top1', top1_m.avg), ('top5', top5_m.avg)])

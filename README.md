@@ -2,7 +2,7 @@
 Multi-label classification based on timm.
 
 ### Update 2021/03/22
-Updated ./timm/models/multi_label_model.py and ./validate.py to show accuracies for each label.
+Updated ./timm/models/multi_label_model.py, ./train.py and ./validate.py to calculate accuracies for each label.
 
 ### Introduction
 This repository is used for multi-label classification. <br>
