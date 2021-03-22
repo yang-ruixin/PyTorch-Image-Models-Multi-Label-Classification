@@ -281,9 +281,9 @@ def validate(args):
             acc1, acc5, acc1_for_each_label = model.get_accuracy(accuracy, output, target, topk=(1, 5))  # topk=(1, 2) ================================
 
             percentage = len(input) / num_of_data
-            acc1_color += acc1_for_each_label['acc1_color'] * percentage
-            acc1_gender += acc1_for_each_label['acc1_gender'] * percentage
-            acc1_article += acc1_for_each_label['acc1_article'] * percentage
+            acc1_color += acc1_for_each_label['color'] * percentage
+            acc1_gender += acc1_for_each_label['gender'] * percentage
+            acc1_article += acc1_for_each_label['article'] * percentage
             # ================================
 
             losses.update(loss.item(), input.size(0))
