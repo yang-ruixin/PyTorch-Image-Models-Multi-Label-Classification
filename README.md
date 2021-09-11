@@ -1,6 +1,10 @@
 # PyTorch-Image-Models-Multi-Label-Classification
 Multi-label classification based on timm.
 
+### Update 2021/09/12
+Multi-label classification with SimCLR is available. See another repo of mine [PyTorch Image models With SimCLR](https://github.com/yang-ruixin/pytorch-image-models-with-simclr). <br>
+You would get higher accuracy when you train the model with classification loss together with SimCLR loss at the same time.
+
 ### Update 2021/03/22
 Updated ./timm/models/multi_label_model.py, ./train.py and ./validate.py to calculate accuracies for each label.
 
@@ -55,7 +59,7 @@ Here is a command example to start to train: <br>
 
 And a command example to start to validate: <br>
 ```
-python validate.py ./fashion-product-images/ --model efficientnet_b2 --checkpoint ./output/train/your_specific_folder/model_best.pth.tar -b 64  
+python validate.py ./fashion-product-images/ --model efficientnet_b2 --checkpoint ./output/train/YOUR_SPECIFIC_FOLDER/model_best.pth.tar -b 64  
 ```
  
  <br>
