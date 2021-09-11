@@ -2,7 +2,7 @@
 Multi-label classification based on timm.
 
 ### Update 2021/09/12
-Multi-label classification with SimCLR is available. See another repo of mine [PyTorch Image models With SimCLR](https://github.com/yang-ruixin/pytorch-image-models-with-simclr). <br>
+Multi-label classification with SimCLR is available. See another repo of mine [PyTorch Image Models with SimCLR](https://github.com/yang-ruixin/pytorch-image-models-with-simclr). <br>
 You would get higher accuracy when you train the model with classification loss together with SimCLR loss at the same time.
 
 ### Update 2021/03/22
